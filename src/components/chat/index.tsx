@@ -11,6 +11,12 @@ import {
 import {GiftedChat, IMessage, Send} from 'react-native-gifted-chat';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 
+//keys.json is where I keep the Chatbot URL and API Key so it doesn't get checked into source control.
+//The file looks like this:
+// {
+//   "ChatbotKey": "API_KEY_GOES_HERE",
+//   "ChatbotUrl": "URL_GOES_HERE"
+// }
 import * as keys from '../../../keys.json';
 
 function ChatbotAvatar(): JSX.Element {
