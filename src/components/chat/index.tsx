@@ -1,6 +1,7 @@
 import axios, {AxiosRequestConfig, AxiosRequestHeaders} from 'axios';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -12,23 +13,42 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 
 import * as keys from '../../../keys.json';
 
+function ChatbotAvatar(): JSX.Element {
+  return (
+    <Image source={require('./chatbot.png')} style={[styles.chatbotAvatar]} />
+  );
+}
+
 function ChatComponent(): JSX.Element {
   const MAX_TOKENS = 2048;
   const USER_ID = 1;
   const BOT_USER_ID = 2;
 
-  const [messages, setMessages] = useState<IMessage[]>([]);
+  const BOT_USER = useMemo(
+    () => ({
+      _id: BOT_USER_ID,
+      name: 'Chatbot GPT',
+      avatar: ChatbotAvatar,
+    }),
+    [],
+  );
+
+  const initialMessages: IMessage[] = [
+    {
+      _id: Math.round(Math.random() * 1000000),
+      text: 'Ask me anything',
+      createdAt: new Date(),
+      user: BOT_USER,
+    },
+  ];
+
+  const [messages, setMessages] = useState<IMessage[]>(initialMessages);
 
   const onSend = useCallback(
     (newMessages: IMessage[] = []) => {
       setMessages(previousMessages =>
         GiftedChat.append(previousMessages, newMessages),
       );
-
-      const BOT_USER = {
-        _id: BOT_USER_ID,
-        name: 'Chatbot GPT',
-      };
       const callApi = async (value: string) => {
         const headers: AxiosRequestHeaders = {} as AxiosRequestHeaders;
         headers['Content-Type'] = 'application/json';
@@ -45,18 +65,17 @@ function ChatComponent(): JSX.Element {
             content: value,
           },
         ];
-        console.debug('Request', messagesToSend);
+
+        const request = {
+          messages: messagesToSend,
+          max_tokens: MAX_TOKENS,
+        };
+
+        console.debug('Request', request);
 
         const chatbotUrl = keys.ChatbotUrl;
         axios
-          .post(
-            `${chatbotUrl}`,
-            {
-              messages: messagesToSend,
-              max_tokens: MAX_TOKENS,
-            },
-            config,
-          )
+          .post(`${chatbotUrl}`, request, config)
           .then(response => {
             console.debug('Response', response.data);
             const botMessage: IMessage = {
@@ -77,7 +96,7 @@ function ChatComponent(): JSX.Element {
       const value = newMessages[0].text;
       callApi(value);
     },
-    [messages],
+    [BOT_USER, messages],
   );
 
   const isDarkMode = useColorScheme() === 'dark';
@@ -137,6 +156,10 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  chatbotAvatar: {
+    height: 40,
+    width: 40,
   },
 });
 
