@@ -13,54 +13,72 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 import * as keys from '../../../keys.json';
 
 function ChatComponent(): JSX.Element {
+  const MAX_TOKENS = 2048;
+  const USER_ID = 1;
+  const BOT_USER_ID = 2;
+
   const [messages, setMessages] = useState<IMessage[]>([]);
 
-  const onSend = useCallback((newMessages: IMessage[] = []) => {
-    setMessages(previousMessages =>
-      GiftedChat.append(previousMessages, newMessages),
-    );
+  const onSend = useCallback(
+    (newMessages: IMessage[] = []) => {
+      setMessages(previousMessages =>
+        GiftedChat.append(previousMessages, newMessages),
+      );
 
-    const BOT_USER = {_id: 2, name: 'Chatbot GPT'};
-    const callApi = async (value: string) => {
-      const headers: AxiosRequestHeaders = {} as AxiosRequestHeaders;
-      headers['Content-Type'] = 'application/json';
-      headers['api-key'] = keys.ChatbotKey;
-      const config: AxiosRequestConfig = {headers: headers};
+      const BOT_USER = {
+        _id: BOT_USER_ID,
+        name: 'Chatbot GPT',
+      };
+      const callApi = async (value: string) => {
+        const headers: AxiosRequestHeaders = {} as AxiosRequestHeaders;
+        headers['Content-Type'] = 'application/json';
+        headers['api-key'] = keys.ChatbotKey;
+        const config: AxiosRequestConfig = {headers: headers};
 
-      const chatbotUrl = keys.ChatbotUrl;
-      axios
-        .post(
-          `${chatbotUrl}`,
+        const messagesToSend = [
+          ...messages.map(m => ({
+            role: m.user._id === USER_ID ? 'user' : 'system',
+            content: m.text,
+          })),
           {
-            messages: [
-              {
-                role: 'user',
-                content: value,
-              },
-            ],
+            role: 'user',
+            content: value,
           },
-          config,
-        )
-        .then(response => {
-          console.debug('Response', response.data);
-          const botMessage: IMessage = {
-            _id: Math.round(Math.random() * 1000000),
-            text: response.data.choices[0].message.content,
-            createdAt: new Date(),
-            user: BOT_USER,
-          };
-          setMessages(previousMessages =>
-            GiftedChat.append(previousMessages, [botMessage]),
-          );
-        })
-        .catch(error => {
-          console.error(error);
-        });
-    };
+        ];
+        console.debug('Request', messagesToSend);
 
-    const value = newMessages[0].text;
-    callApi(value);
-  }, []);
+        const chatbotUrl = keys.ChatbotUrl;
+        axios
+          .post(
+            `${chatbotUrl}`,
+            {
+              messages: messagesToSend,
+              max_tokens: MAX_TOKENS,
+            },
+            config,
+          )
+          .then(response => {
+            console.debug('Response', response.data);
+            const botMessage: IMessage = {
+              _id: Math.round(Math.random() * 1000000),
+              text: response.data.choices[0].message.content,
+              createdAt: new Date(),
+              user: BOT_USER,
+            };
+            setMessages(previousMessages =>
+              GiftedChat.append(previousMessages, [botMessage]),
+            );
+          })
+          .catch(error => {
+            console.error(error);
+          });
+      };
+
+      const value = newMessages[0].text;
+      callApi(value);
+    },
+    [messages],
+  );
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -77,7 +95,7 @@ function ChatComponent(): JSX.Element {
         messages={messages}
         onSend={(_messages: IMessage[]) => onSend(_messages)}
         user={{
-          _id: 1,
+          _id: USER_ID,
         }}
         showUserAvatar
         alwaysShowSend
